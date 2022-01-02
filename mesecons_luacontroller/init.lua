@@ -938,6 +938,7 @@ local function on_receive_fields(pos, form_name, fields, sender)
 		update_formspec(pos)
 	else
 		local tab = meta:get_int("tab")
+		if tab < 1 or tab > 2 then tab = 1 end
 		if tab == 1 then
 			--Code tab
 			if not fields.program then
