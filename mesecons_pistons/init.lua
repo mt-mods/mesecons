@@ -454,6 +454,7 @@ minetest.register_node("mesecons_pistons:piston_sticky_overheated", {
 	groups = {cracky = 3, not_in_creative_inventory = 1},
 	paramtype2 = "facedir",
 	is_ground_content = false,
+	drop = "mesecons_pistons:piston_sticky_off",
 	sounds = default.node_sound_wood_defaults(),
 	mesecons = {effector={
 		rules = piston_get_rules,
