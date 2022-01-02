@@ -366,7 +366,8 @@ local get_interrupt
 if mesecon.setting("luacontroller_lightweight_interrupts", false) then
 	-- use node timer
 	get_interrupt = function(pos, itbl, send_warning)
-		return (function(time, iid)
+		return (function(time, iid, lightweight)
+			if lightweight == false then send_warning("Interrupts are always lightweight on this server") end
 			if type(time) ~= "nil" and type(time) ~= "number" then error("Delay must be a number to set or nil to cancel") end
 			if type(time) == "number" and time < 1 then send_warning("Delays of less than 1 second are not allowed on this server") end
 			local ok, warn = validate_iid(iid)
@@ -379,15 +380,25 @@ else
 	-- itbl: Flat table of functions to run after sandbox cleanup, used to prevent various security hazards
 	get_interrupt = function(pos, itbl, send_warning)
 		-- iid = interrupt id
-		return function (time, iid)
+		return function (time, iid, lightweight)
 			-- NOTE: This runs within string metatable sandbox, so don't *rely* on anything of the form (""):y
 			-- Hence the values get moved out. Should take less time than original, so totally compatible
-			if type(time) ~= "number" then error("Delay must be a number") end
+			if lightweight then
+				if type(time) ~= "nil" and type(time) ~= "number" then error("Delay must be a number to set or nil to cancel") end
+			else
+				if type(time) ~= "number" then error("Delay must be a number") end
+			end
 			table.insert(itbl, function ()
 				-- Outside string metatable sandbox, can safely run this now
 				local luac_id = minetest.get_meta(pos):get_int("luac_id")
 				local ok, warn = validate_iid(iid)
-				if ok then mesecon.queue:add_action(pos, "lc_interrupt", {luac_id, iid}, time, iid, 1) end
+				if ok then
+					if lightweight then
+						set_nodetimer_interrupt(pos,time,iid)
+					else
+						mesecon.queue:add_action(pos, "lc_interrupt", {luac_id, iid}, time, iid, 1)
+					end
+				end
 				if warn then send_warning(warn) end
 			end)
 		end
