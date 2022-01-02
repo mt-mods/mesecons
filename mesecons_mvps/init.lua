@@ -291,11 +291,16 @@ function mesecon.mvps_move_objects(pos, dir, nodestack, movefactor)
 		local min_pos = vector.add(obj_pos, vector.new(cbox[1], cbox[2], cbox[3]))
 		local max_pos = vector.add(obj_pos, vector.new(cbox[4], cbox[5], cbox[6]))
 		local ok = true
+		local is_player = obj:is_player()
 		for k, v in pairs(pos) do
 			local edge1, edge2
 			if k ~= dir_k then
-				edge1 = v - 0.51 -- More than 0.5 to move objects near to the stack.
-				edge2 = v + 0.51
+				--Slightly more than 0.5 for normal entities so they get dragged with (for example, pushing carts)
+				--but a bit less than 0.5 so players don't get unexpectedly pushed by a stack they aren't in front of.
+				--In the special case of a player standing on top of a stack, use the larger value anyway to simulate friction moving the player.
+				local range = is_player and 0.49 or 0.51
+				edge1 = v - range
+				edge2 = v + (k == "y" and 0.51 or range)
 			else
 				edge1 = v - 0.5 * dir_l
 				edge2 = v + (#nodestack + 0.5 * movefactor) * dir_l
