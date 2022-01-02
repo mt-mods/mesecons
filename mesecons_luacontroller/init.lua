@@ -211,16 +211,81 @@ local function ignore_event(event, meta)
 	end
 end
 
+-----------------------
+-- Formspec creation --
+-----------------------
+
+local function update_formspec(pos)
+	local meta = minetest.get_meta(pos)
+	local code = minetest.formspec_escape(meta:get_string("code"))
+	local errmsg = minetest.formspec_escape(meta:get_string("errmsg"))
+	local tab = meta:get_int("tab")
+	if tab < 1 or tab > 2 then tab = 1 end
+	
+	--Default theme settings
+	local textcolor = "#ffffff"
+	local bg_img = "jeija_luac_background.png"
+	local run_img = "jeija_luac_runbutton.png"
+	local close_img = "jeija_close_window.png"
+	
+	--If Dreambuilder's theming engine is in use, then override those
+	if minetest.global_exists("dreambuilder_theme") then
+		textcolor = dreambuilder_theme.editor_text_color
+		bg_img = dreambuilder_theme.name.."_jeija_luac_background.png"
+		run_img = dreambuilder_theme.name.."_jeija_luac_runbutton.png"
+		close_img = dreambuilder_theme.name.."_jeija_close_window.png"
+	end
+	
+	local fs = "formspec_version[4]"
+		.."size[15,12]"
+		.."style_type[label,textarea,field;font=mono]"
+		.."style_type[textarea;textcolor="..textcolor.."]"
+		.."background[0,0;15,12;"..bg_img.."]"
+		.."tabheader[0,0;tab;Code,Terminal;"..tab.."]"
+		.."image_button_exit[14.5,0;0.425,0.4;"..close_img..";exit;]"
+		
+	if tab == 1 then
+		--Code tab
+		fs = fs.."label[0.1,10;"..errmsg.."]"
+			.."textarea[0.25,0.6;14.5,9.05;code;;"..code.."]"
+			.."image_button[6.25,10.25;2.5,1;"..run_img..";program;]"
+	elseif tab == 2 then
+		--Terminal tab
+		local termtext = minetest.formspec_escape(meta:get_string("terminal_text"))
+		fs = fs.."textarea[0.25,0.6;14.5,9.05;;;"..termtext.."]"
+			.."field[0.25,9.85;12.5,1;terminal_input;;]"
+			.."button[12.75,9.85;2,1;terminal_send;Send]"
+			.."button[12.75,10.85;2,1;terminal_clear;Clear]"
+			.."field_close_on_enter[terminal_input;false]"
+	end
+
+	meta:set_string("formspec",fs)
+end
+
 -------------------------
 -- Parsing and running --
 -------------------------
 
-local function safe_print(param)
-	local string_meta = getmetatable("")
-	local sandbox = string_meta.__index
-	string_meta.__index = string -- Leave string sandbox temporarily
-	print(dump(param))
-	string_meta.__index = sandbox -- Restore string sandbox
+local function terminal_write(pos,text)
+	local meta = minetest.get_meta(pos)
+	local oldtext = meta:get_string("terminal_text")
+	local delim = string.len(oldtext) > 0 and "\n" or ""
+	local newtext = string.sub(oldtext..delim..text,-100000,-1)
+	meta:set_string("terminal_text",newtext)
+end
+
+local function get_safe_print(pos)
+	return function (param)
+		local string_meta = getmetatable("")
+		local sandbox = string_meta.__index
+		string_meta.__index = string -- Leave string sandbox temporarily
+		if type(param) == "string" then
+			terminal_write(pos,param)
+		else
+			terminal_write(pos,dump(param))
+		end
+		string_meta.__index = sandbox -- Restore string sandbox
+	end
 end
 
 local function safe_date()
@@ -549,7 +614,7 @@ local function create_environment(pos, mem, event, itbl, send_warning)
 		mem = mem,
 		heat = mesecon.get_heat(pos),
 		heat_max = mesecon.setting("overheat_max", 20),
-		print = safe_print,
+		print = get_safe_print(pos),
 		interrupt = get_interrupt(pos, itbl, send_warning),
 		digiline_send = get_digiline_send(pos, itbl, send_warning),
 		string = {
@@ -690,6 +755,7 @@ local function run_inner(pos, code, event)
 	local warning = ""
 	local function send_warning(str)
 		warning = "Warning: " .. str
+		terminal_write(pos,"[WARNING] "..str)
 	end
 
 	-- Create environment
@@ -728,36 +794,17 @@ local function run_inner(pos, code, event)
 	return true, warning
 end
 
-local function reset_formspec(meta, code, errmsg)
+local function reset_formspec(pos, meta, code, errmsg)
 	meta:set_string("code", code)
 	meta:mark_as_private("code")
-	code = minetest.formspec_escape(code or "")
-	errmsg = minetest.formspec_escape(tostring(errmsg or ""))
-	if minetest.get_modpath("dreambuilder_theme_settings") then
-		meta:set_string("formspec", "size[12,10]"
-			.."style_type[label,textarea;font=mono]" 
-			.."style_type[textarea;textcolor="..dreambuilder_theme.editor_text_color.."]"
-			.."background[-0.2,-0.25;12.4,10.75;"..dreambuilder_theme.name.."_jeija_luac_background.png]"
-			.."label[0.1,8.3;"..errmsg.."]"
-			.."textarea[0.2,0.2;12.2,9.5;code;;"..code.."]"
-			.."image_button[4.75,8.75;2.5,1;"..dreambuilder_theme.name.."_jeija_luac_runbutton.png;program;]"
-			.."image_button_exit[11.72,-0.25;0.425,0.4;"..dreambuilder_theme.name.."_jeija_close_window.png;exit;]"
-		)
-	else
-		meta:set_string("formspec", "size[12,10]"
-			.."style_type[label,textarea;font=mono]"
-			.."background[-0.2,-0.25;12.4,10.75;jeija_luac_background.png]"
-			.."label[0.1,8.3;"..errmsg.."]"
-			.."textarea[0.2,0.2;12.2,9.5;code;;"..code.."]"
-			.."image_button[4.75,8.75;2.5,1;jeija_luac_runbutton.png;program;]"
-			.."image_button_exit[11.72,-0.25;0.425,0.4;jeija_close_window.png;exit;]"
-		)
-	end
+	meta:set_string("errmsg",tostring(errmsg or ""))
+	meta:mark_as_private("errmsg")
+	update_formspec(pos)
 end
 
 local function reset_meta(pos, code, errmsg)
 	local meta = minetest.get_meta(pos)
-	reset_formspec(meta, code, errmsg)
+	reset_formspec(pos, meta, code, errmsg)
 	meta:set_int("luac_id", math.random(1, 65535))
 end
 
@@ -770,9 +817,10 @@ local function run(pos, event)
 	local code = meta:get_string("code")
 	local ok, errmsg = run_inner(pos, code, event)
 	if not ok then
+		terminal_write(pos,"[ERROR] "..errmsg)
 		reset_meta(pos, code, errmsg)
 	else
-		reset_formspec(meta, code, errmsg)
+		reset_formspec(pos, meta, code, errmsg)
 	end
 	return ok, errmsg
 end
@@ -879,18 +927,48 @@ local function set_program(pos, code)
 end
 
 local function on_receive_fields(pos, form_name, fields, sender)
-	if not fields.program then
-		return
-	end
-	local name = sender:get_player_name()
-	if minetest.is_protected(pos, name) and not minetest.check_player_privs(name, {protection_bypass=true}) then
-		minetest.record_protection_violation(pos, name)
-		return
-	end
-	local ok, err = set_program(pos, fields.code)
-	if not ok then
-		-- it's not an error from the server perspective
-		minetest.log("action", "Lua controller programming error: " .. tostring(err))
+	local meta = minetest.get_meta(pos)
+	if fields.tab then
+		local name = sender:get_player_name()
+		if minetest.is_protected(pos, name) and not minetest.check_player_privs(name, {protection_bypass=true}) then
+			minetest.record_protection_violation(pos, name)
+			return
+		end
+		meta:set_int("tab",fields.tab)
+		update_formspec(pos)
+	else
+		local tab = meta:get_int("tab")
+		if tab == 1 then
+			--Code tab
+			if not fields.program then
+				return
+			end
+			local name = sender:get_player_name()
+			if minetest.is_protected(pos, name) and not minetest.check_player_privs(name, {protection_bypass=true}) then
+				minetest.record_protection_violation(pos, name)
+				return
+			end
+			meta:set_string("terminal_text","")
+			local ok, err = set_program(pos, fields.code)
+			if not ok then
+				-- it's not an error from the server perspective
+				minetest.log("action", "Lua controller programming error: " .. tostring(err))
+			end
+		elseif tab == 2 then
+			--Terminal tab
+			if fields.exit or fields.quit then return end
+			local name = sender:get_player_name()
+			if minetest.is_protected(pos, name) and not minetest.check_player_privs(name, {protection_bypass=true}) then
+				minetest.record_protection_violation(pos, name)
+				return
+			end
+			if fields.terminal_clear then
+				meta:set_string("terminal_text","")
+				update_formspec(pos)
+				return
+			end
+			run(pos,{type="terminal",text=fields.terminal_input})
+		end
 	end
 end
 
