@@ -357,3 +357,33 @@ mesecon.register_on_mvps_move(function(moved_nodes)
 		end
 	end
 end)
+
+--Some multi-node objects need to be registered as (conditional) stoppers as well in order to prevent them from being separated.
+function mesecon.register_mvps_inseparable(node1,node2)
+		mesecon.register_mvps_stopper(node1,function (node, dir, stack, stackid)
+			if (stack[stackid + 1]
+			and stack[stackid + 1].node.name   == node2
+			and stack[stackid + 1].node.param2 == node.param2)
+			or (stack[stackid - 1]
+			and stack[stackid - 1].node.name   == node2
+			and stack[stackid - 1].node.param2 == node.param2) then
+				return false
+			end
+			return true
+		end
+	)
+		mesecon.register_mvps_stopper(node2,function (node, dir, stack, stackid)
+			if (stack[stackid + 1]
+			and stack[stackid + 1].node.name   == node1
+			and stack[stackid + 1].node.param2 == node.param2)
+			or (stack[stackid - 1]
+			and stack[stackid - 1].node.name   == node1
+			and stack[stackid - 1].node.param2 == node.param2) then
+				return false
+			end
+			return true
+		end
+	)
+end
+mesecon.register_mvps_inseparable("beds:bed_bottom","beds:bed_top")
+mesecon.register_mvps_inseparable("beds:fancy_bed_bottom","beds:fancy_bed_top")
