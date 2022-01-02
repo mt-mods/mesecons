@@ -118,16 +118,19 @@ local function piston_off(pos, node)
 	local pistonspec = get_pistonspec(node.name, "onname")
 	minetest.swap_node(pos, {param2 = node.param2, name = pistonspec.offname})
 	piston_remove_pusher(pos, node, not pistonspec.sticky) -- allow that even in protected area
-
-	if not pistonspec.sticky then
-		return
+	if pistonspec.sticky then
+		local dir = minetest.facedir_to_dir(node.param2)
+		local pullpos = vector.add(pos, vector.multiply(dir, -2))
+		local meta = minetest.get_meta(pos)
+		local success, stack, oldstack = mesecon.mvps_pull_single(pullpos, dir, max_pull, meta:get_string("owner"))
+		if success then
+			mesecon.mvps_move_objects(pullpos, vector.multiply(dir, -1), oldstack, -1)
+		end
 	end
-	local dir = minetest.facedir_to_dir(node.param2)
-	local pullpos = vector.add(pos, vector.multiply(dir, -2))
-	local meta = minetest.get_meta(pos)
-	local success, stack, oldstack = mesecon.mvps_pull_single(pullpos, dir, max_pull, meta:get_string("owner"))
-	if success then
-		mesecon.mvps_move_objects(pullpos, vector.multiply(dir, -1), oldstack, -1)
+	if mesecon.do_overheat(pos) then
+		minetest.swap_node(pos, {param2 = node.param2, name = pistonspec.hotname})
+		mesecon.queue:add_action(pos, "piston_cooldown", {}, 5, "piston_cooldown")
+		return
 	end
 end
 
