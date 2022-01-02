@@ -324,15 +324,54 @@ local function validate_iid(iid)
 	return true, "Table interrupt IDs are deprecated and are unreliable; use strings instead"
 end
 
+local function get_next_nodetimer_interrupt(interrupts)
+	local nextint = 0
+	for k,v in pairs(interrupts) do
+		if nextint == 0 or v < nextint then
+			nextint = v
+		end
+	end
+	if nextint ~= 0 then return(nextint) end
+end
+
+local function get_current_nodetimer_interrupts(interrupts)
+	local current = {}
+	for k,v in pairs(interrupts) do
+		if v <= os.time() then
+			table.insert(current,k)
+		end
+	end
+	return(current)
+end
+
+local function set_nodetimer_interrupt(pos,time,iid)
+	if type(iid) ~= "string" then iid = "" end
+	local meta = minetest.get_meta(pos)
+	local timer = minetest.get_node_timer(pos)
+	local interrupts = minetest.deserialize(meta:get_string("interrupts")) or {}
+	if time == nil then
+		interrupts[iid] = nil
+	else
+		interrupts[iid] = os.time()+time
+	end
+	local nextint = get_next_nodetimer_interrupt(interrupts)
+	if nextint then
+		timer:start(nextint-os.time())
+	end
+	meta:set_string("interrupts",minetest.serialize(interrupts))
+end
+
 -- The setting affects API so is not intended to be changeable at runtime
 local get_interrupt
 if mesecon.setting("luacontroller_lightweight_interrupts", false) then
 	-- use node timer
 	get_interrupt = function(pos, itbl, send_warning)
 		return (function(time, iid)
-			if type(time) ~= "number" then error("Delay must be a number") end
-			if iid ~= nil then send_warning("Interrupt IDs are disabled on this server") end
-			table.insert(itbl, function() minetest.get_node_timer(pos):start(time) end)
+			if type(time) ~= "nil" and type(time) ~= "number" then error("Delay must be a number to set or nil to cancel") end
+			if type(time) == "number" and time < 1 then send_warning("Delays of less than 1 second are not allowed on this server") end
+			local ok, warn = validate_iid(iid)
+			if ok then set_nodetimer_interrupt(pos,time,iid) end
+			if warn then send_warning(warn) end
 		end)
 	end
 else
@@ -719,11 +758,38 @@ local function reset(pos)
 	set_port_states(pos, {a=false, b=false, c=false, d=false})
 end
 
+local function on_nodetimer_interrupt(pos)
+	local meta = minetest.get_meta(pos)
+	local timer = minetest.get_node_timer(pos)
+	local interrupts = minetest.deserialize(meta:get_string("interrupts")) or {}
+	local current = get_current_nodetimer_interrupts(interrupts)
+	for _,i in ipairs(current) do
+		interrupts[i] = nil
+		local event = {}
+		event.type = "interrupt"
+		event.iid = i
+		run(pos,event)
+	end
+	local interrupts = minetest.deserialize(meta:get_string("interrupts")) or {} --Reload as it may have changed
+	for _,i in ipairs(current) do
+		if interrupts[i] and interrupts[i] <= os.time() then
+			interrupts[i] = nil
+		end
+	end
+	local nextint = get_next_nodetimer_interrupt(interrupts)
+	if nextint then
+		timer:start(nextint-os.time())
+	else
+		timer:stop()
+	end
+	meta:set_string("interrupts",minetest.serialize(interrupts))
+end
+
 local function node_timer(pos)
 	if minetest.registered_nodes[minetest.get_node(pos).name].is_burnt then
 		return false
 	end
-	run(pos, {type="interrupt"})
+	on_nodetimer_interrupt(pos)
 	return false
 end
 
