@@ -701,6 +701,9 @@ end
 
 -- Wraps run_inner with LC-reset-on-error
 local function run(pos, event)
+	if not (minetest.get_item_group(minetest.get_node(pos).name,"mesecons_luacontroller") > 0) then
+		return false,"Luacontroller no longer exists"
+	end
 	local meta = minetest.get_meta(pos)
 	local code = meta:get_string("code")
 	local ok, errmsg = run_inner(pos, code, event)
@@ -824,9 +827,9 @@ for d = 0, 1 do
 
 	local groups
 	if a + b + c + d ~= 0 then
-		groups = {dig_immediate=2, not_in_creative_inventory=1, overheat = 1}
+		groups = {dig_immediate=2, not_in_creative_inventory=1, overheat = 1, mesecons_luacontroller = 1,}
 	else
-		groups = {dig_immediate=2, overheat = 1}
+		groups = {dig_immediate=2, overheat = 1, mesecons_luacontroller = 1,}
 	end
 
 	output_rules[cid] = {}
