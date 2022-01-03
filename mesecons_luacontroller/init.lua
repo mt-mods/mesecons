@@ -28,6 +28,9 @@
 -- (see where local env is defined)
 -- Something nice to play is is appending minetest.env to it.
 
+--Load the documentation manager, which provides examples and library information
+dofile(minetest.get_modpath("mesecons_luacontroller")..DIR_DELIM.."docmanager.lua")
+
 local BASENAME = "mesecons_luacontroller:luacontroller"
 
 local rules = {
@@ -220,7 +223,7 @@ local function update_formspec(pos)
 	local code = minetest.formspec_escape(meta:get_string("code"))
 	local errmsg = minetest.formspec_escape(meta:get_string("errmsg"))
 	local tab = meta:get_int("tab")
-	if tab < 1 or tab > 2 then tab = 1 end
+	if tab < 1 or tab > 4 then tab = 1 end
 	
 	--Default theme settings
 	local textcolor = "#ffffff"
@@ -241,7 +244,7 @@ local function update_formspec(pos)
 		.."style_type[label,textarea,field;font=mono]"
 		.."style_type[textarea;textcolor="..textcolor.."]"
 		.."background[0,0;15,12;"..bg_img.."]"
-		.."tabheader[0,0;tab;Code,Terminal;"..tab.."]"
+		.."tabheader[0,0;tab;Code,Terminal,Help,Examples;"..tab.."]"
 		.."image_button_exit[14.5,0;0.425,0.4;"..close_img..";exit;]"
 		
 	if tab == 1 then
@@ -257,6 +260,13 @@ local function update_formspec(pos)
 			.."button[12.75,9.85;2,1;terminal_send;Send]"
 			.."button[12.75,10.85;2,1;terminal_clear;Clear]"
 			.."field_close_on_enter[terminal_input;false]"
+	elseif tab == 3 then
+		--Help tab
+		fs = fs..mesecon.lc_docs.generate_help_formspec(meta:get_int("help_selidx"))
+	elseif tab == 4 then
+		--Examples tab
+		fs = fs..mesecon.lc_docs.generate_example_formspec(meta:get_int("example_selidx"))
+			.."image_button[6.25,10.25;2.5,1;"..run_img..";program_example;]"
 	end
 
 	meta:set_string("formspec",fs)
@@ -938,7 +948,7 @@ local function on_receive_fields(pos, form_name, fields, sender)
 		update_formspec(pos)
 	else
 		local tab = meta:get_int("tab")
-		if tab < 1 or tab > 2 then tab = 1 end
+		if tab < 1 or tab > 4 then tab = 1 end
 		if tab == 1 then
 			--Code tab
 			if not fields.program then
@@ -969,6 +979,36 @@ local function on_receive_fields(pos, form_name, fields, sender)
 				return
 			end
 			run(pos,{type="terminal",text=fields.terminal_input})
+		elseif tab == 3 then
+			--Help tab
+			if fields.help_list then
+				local event = minetest.explode_textlist_event(fields.help_list)
+				if event.type == "CHG" then
+					meta:set_int("help_selidx",event.index)
+					update_formspec(pos)
+				end
+			end
+		elseif tab == 4 then
+			--Examples tab
+			if fields.example_list then
+				local event = minetest.explode_textlist_event(fields.example_list)
+				if event.type == "CHG" then
+					meta:set_int("example_selidx",event.index)
+					update_formspec(pos)
+				end
+			elseif fields.program_example then
+				local name = sender:get_player_name()
+				if minetest.is_protected(pos, name) and not minetest.check_player_privs(name, {protection_bypass=true}) then
+					minetest.record_protection_violation(pos, name)
+					return
+				end
+				local selidx = meta:get_int("example_selidx")
+				selidx = math.max(1,math.min(selidx,#mesecon.lc_docs.example_order))
+				local code = mesecon.lc_docs.examples[mesecon.lc_docs.example_order[selidx]]
+				meta:set_string("terminal_text","")
+				meta:set_int("tab",1)
+				set_program(pos,code)
+			end
 		end
 	end
 end
