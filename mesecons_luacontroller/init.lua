@@ -276,25 +276,36 @@ end
 -- Parsing and running --
 -------------------------
 
-local function terminal_write(pos,text)
+local function terminal_write(pos,text,nolf)
 	local meta = minetest.get_meta(pos)
 	local oldtext = meta:get_string("terminal_text")
-	local delim = string.len(oldtext) > 0 and "\n" or ""
+	local delim = (string.len(oldtext) > 0 and not nolf) and "\n" or ""
 	local newtext = string.sub(oldtext..delim..text,-100000,-1)
 	meta:set_string("terminal_text",newtext)
 end
 
+local function terminal_clear(pos)
+	minetest.get_meta(pos):set_string("terminal_text","")
+end
+
 local function get_safe_print(pos)
-	return function (param)
+	return function (param,nolf)
 		local string_meta = getmetatable("")
 		local sandbox = string_meta.__index
 		string_meta.__index = string -- Leave string sandbox temporarily
+		if param == nil then param = "" end
 		if type(param) == "string" then
-			terminal_write(pos,param)
+			terminal_write(pos,param,nolf)
 		else
-			terminal_write(pos,dump(param))
+			terminal_write(pos,dump(param),nolf)
 		end
 		string_meta.__index = sandbox -- Restore string sandbox
+	end
+end
+
+local function get_clear(pos)
+	return function()
+		terminal_clear(pos)
 	end
 end
 
@@ -625,6 +636,7 @@ local function create_environment(pos, mem, event, itbl, send_warning)
 		heat = mesecon.get_heat(pos),
 		heat_max = mesecon.setting("overheat_max", 20),
 		print = get_safe_print(pos),
+		clearterm = get_clear(pos),
 		interrupt = get_interrupt(pos, itbl, send_warning),
 		digiline_send = get_digiline_send(pos, itbl, send_warning),
 		string = {
@@ -975,7 +987,7 @@ local function on_receive_fields(pos, form_name, fields, sender)
 				return
 			end
 			if fields.terminal_clear then
-				meta:set_string("terminal_text","")
+				terminal_clear(pos)
 				update_formspec(pos)
 				return
 			end
