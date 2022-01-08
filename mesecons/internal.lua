@@ -318,7 +318,7 @@ function mesecon.get_conductor_on(node_off, rulename)
 			return conductor.states[tonumber(binstate,2)+1]
 		end
 	end
-	return offstate
+	return nil
 end
 
 function mesecon.get_conductor_off(node_on, rulename)
@@ -334,7 +334,7 @@ function mesecon.get_conductor_off(node_on, rulename)
 			return conductor.states[tonumber(binstate,2)+1]
 		end
 	end
-	return onstate
+	return nil
 end
 
 function mesecon.conductor_get_rules(node)
@@ -606,8 +606,8 @@ function mesecon.is_powered(pos, rule)
 	local sourcepos = {}
 
 	if not rule then
-		for _, rule in ipairs(mesecon.flattenrules(rules)) do
-			local rulenames = mesecon.rules_link_rule_all_inverted(pos, rule)
+		for _, rule_entry in ipairs(mesecon.flattenrules(rules)) do
+			local rulenames = mesecon.rules_link_rule_all_inverted(pos, rule_entry)
 			for _, rname in ipairs(rulenames) do
 				local np = vector.add(pos, rname)
 				local nn = mesecon.get_node_force(np)

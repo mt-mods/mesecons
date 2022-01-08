@@ -286,7 +286,7 @@ end
 -- File writing / reading utilities
 local wpath = minetest.get_worldpath()
 function mesecon.file2table(filename)
-	local f = io.open(wpath..DIR_DELIM..filename, "r")
+	local f = io.open(wpath.."/"..filename, "r")
 	if f == nil then return {} end
 	local t = f:read("*all")
 	f:close()
@@ -295,7 +295,7 @@ function mesecon.file2table(filename)
 end
 
 function mesecon.table2file(filename, table)
-	local f = io.open(wpath..DIR_DELIM..filename, "w")
+	local f = io.open(wpath.."/"..filename, "w")
 	f:write(minetest.serialize(table))
 	f:close()
 end
@@ -370,13 +370,16 @@ local function vm_get_or_create_entry(pos)
 	return tbl
 end
 
+-- ignore content id
+local c_ignore = minetest.get_content_id("ignore")
+
 -- Gets the node at a given position during a VoxelManipulator-based
 -- transaction.
 function mesecon.vm_get_node(pos)
 	local tbl = vm_get_or_create_entry(pos)
 	local index = tbl.va:indexp(pos)
 	local node_value = tbl.data[index]
-	if node_value == core.CONTENT_IGNORE then
+	if node_value == c_ignore then
 		return nil
 	else
 		local node_param1 = tbl.param1[index]

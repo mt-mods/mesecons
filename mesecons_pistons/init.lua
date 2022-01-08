@@ -24,7 +24,7 @@ local function get_pistonspec_name(name, part)
 		return
 	end
 	for spec_name, spec in pairs(specs) do
-		for part, value in pairs(spec)  do
+		for _, value in pairs(spec)  do
 			if name == value then
 				return spec_name, part
 			end
@@ -526,7 +526,7 @@ local piston_up_down_get_stopper = function (node, dir, stack, stackid)
 	return true
 end
 
-local function piston_get_stopper(node, dir, stack, stackid)
+local function piston_get_stopper(node, _, stack, stackid)
 	local pistonspec = get_pistonspec(node.name, "onname")
 	local dir = vector.multiply(minetest.facedir_to_dir(node.param2), -1)
 	local pusherpos = vector.add(stack[stackid].pos, dir)
@@ -566,4 +566,4 @@ minetest.register_craft({
 
 
 -- load legacy code
-dofile(minetest.get_modpath("mesecons_pistons")..DIR_DELIM.."legacy.lua")
+dofile(minetest.get_modpath("mesecons_pistons").."/legacy.lua")
