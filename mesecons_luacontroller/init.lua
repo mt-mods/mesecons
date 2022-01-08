@@ -81,7 +81,7 @@ local function update_real_port_states(pos, rule_name, new_state)
 	if rule_name.x == nil then
 		for _, rname in ipairs(rule_name) do
 			local port = pos_to_side[rname.x + (2 * rname.z) + 3]
-			L[port] = (newstate == "on") and 1 or 0
+			L[port] = (new_state == "on") and 1 or 0
 		end
 	else
 		local port = pos_to_side[rule_name.x + (2 * rule_name.z) + 3]
@@ -224,13 +224,13 @@ local function update_formspec(pos)
 	local errmsg = minetest.formspec_escape(meta:get_string("errmsg"))
 	local tab = meta:get_int("tab")
 	if tab < 1 or tab > 4 then tab = 1 end
-	
+
 	--Default theme settings
 	local textcolor = "#ffffff"
 	local bg_img = "jeija_luac_background.png"
 	local run_img = "jeija_luac_runbutton.png"
 	local close_img = "jeija_close_window.png"
-	
+
 	--If Dreambuilder's theming engine is in use, then override those
 	if minetest.global_exists("dreambuilder_theme") then
 		textcolor = dreambuilder_theme.editor_text_color
@@ -238,7 +238,7 @@ local function update_formspec(pos)
 		run_img = dreambuilder_theme.name.."_jeija_luac_runbutton.png"
 		close_img = dreambuilder_theme.name.."_jeija_close_window.png"
 	end
-	
+
 	local fs = "formspec_version[4]"
 		.."size[15,12]"
 		.."style_type[label,textarea,field;font=mono]"
@@ -246,7 +246,7 @@ local function update_formspec(pos)
 		.."background[0,0;15,12;"..bg_img.."]"
 		.."tabheader[0,0;tab;Code,Terminal,Help,Examples;"..tab.."]"
 		.."image_button_exit[14.5,0;0.425,0.4;"..close_img..";exit;]"
-		
+
 	if tab == 1 then
 		--Code tab
 		fs = fs.."label[0.1,10;"..errmsg.."]"
@@ -335,8 +335,8 @@ local function safe_string_find(...)
 	return string.find(...)
 end
 
-local function remove_functions(x)
-	local tp = type(x)
+local function remove_functions(obj)
+	local tp = type(obj)
 	if tp == "function" then
 		return nil
 	end
@@ -365,9 +365,9 @@ local function remove_functions(x)
 		end
 	end
 
-	rfuncs(x)
+	rfuncs(obj)
 
-	return x
+	return obj
 end
 
 local function validate_iid(iid)
@@ -701,7 +701,7 @@ local function create_environment(pos, mem, event, itbl, send_warning)
 	for _, name in pairs(safe_globals) do
 		env[name] = _G[name]
 	end
-	
+
 	env.require = get_require(pos, env)
 
 	return env
@@ -763,15 +763,13 @@ end
 
 -- Returns success (boolean), errmsg (string)
 -- run (as opposed to run_inner) is responsible for setting up meta according to this output
-local function run_inner(pos, code, event)
-	local meta = minetest.get_meta(pos)
+local function run_inner(pos, meta, event)
 	-- Note: These return success, presumably to avoid changing LC ID.
 	if overheat(pos) then return true, "" end
 	if ignore_event(event, meta) then return true, "" end
 
 	-- Load code & mem from meta
 	local mem  = load_memory(meta)
-	local code = meta:get_string("code")
 
 	-- 'Last warning' label.
 	local warning = ""
@@ -785,14 +783,15 @@ local function run_inner(pos, code, event)
 	local env = create_environment(pos, mem, event, itbl, send_warning)
 
 	-- Create the sandbox and execute code
-	local f, msg = create_sandbox(code, env)
+	local f, msg = create_sandbox(meta:get_string("code"), env)
 	if not f then return false, msg end
 	-- Start string true sandboxing
 	local onetruestring = getmetatable("")
 	-- If a string sandbox is already up yet inconsistent, something is very wrong
 	assert(onetruestring.__index == string)
 	onetruestring.__index = env.string
-	local success, msg = pcall(f)
+	local success
+	success, msg = pcall(f)
 	onetruestring.__index = string
 	-- End string true sandboxing
 	if not success then return false, msg end
@@ -837,7 +836,7 @@ local function run(pos, event)
 	end
 	local meta = minetest.get_meta(pos)
 	local code = meta:get_string("code")
-	local ok, errmsg = run_inner(pos, code, event)
+	local ok, errmsg = run_inner(pos, meta, event)
 	if not ok then
 		if not errmsg then errmsg = "(unknown error)" end
 		terminal_write(pos,"[ERROR] "..errmsg)
@@ -864,7 +863,7 @@ local function on_nodetimer_interrupt(pos)
 		event.iid = i
 		run(pos,event)
 	end
-	local interrupts = minetest.deserialize(meta:get_string("interrupts")) or {} --Reload as it may have changed
+	interrupts = minetest.deserialize(meta:get_string("interrupts")) or {} --Reload as it may have changed
 	for _,i in ipairs(current) do
 		if interrupts[i] and interrupts[i] <= os.time() then
 			interrupts[i] = nil

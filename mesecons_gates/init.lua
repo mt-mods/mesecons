@@ -165,7 +165,7 @@ register_gate("or", 2, function (val1, val2) return (val1 or val2) end,
 	 {"", "mesecons:mesecon", "mesecons:mesecon"},
 	 {"mesecons:mesecon", "", ""}},
 	"OR Gate")
-	
+
 local pulsetime = { 0.1, 0.3, 0.5, 1.0 } --Same as the delayer
 
 local function pulsegate_on(pos,node)

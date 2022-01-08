@@ -188,9 +188,9 @@ yc.update = function(pos)
 
 	if (mesecon.do_overheat(pos)) then
 		minetest.remove_node(pos)
-		minetest.after(0.2, function (pos)
+		minetest.after(0.2, function()
 			mesecon.receptor_off(pos, mesecon.rules.flat)
-		end , pos) -- wait for pending parsings
+		end) -- wait for pending parsings
 		minetest.add_item(pos, "mesecons_microcontroller:microcontroller0000")
 	end
 
@@ -251,9 +251,9 @@ yc.parsecode = function(code, pos)
 			if not params then return nil end
 		end
 		if command == "on" then
-			L = yc.command_on (params, Lvirtual)
+			yc.command_on (params, Lvirtual)
 		elseif command == "off" then
-			L = yc.command_off(params, Lvirtual)
+			yc.command_off(params, Lvirtual)
 		elseif command == "print" then
 			local su = yc.command_print(params, eeprom, yc.merge_portstates(Lreal, Lvirtual))
 			if su ~= true then return nil end
@@ -405,7 +405,7 @@ yc.command_print = function(params, eeprom, L)
 		if param:sub(1,1) == '"' and param:sub(#param, #param) == '"' then
 			s = s..param:sub(2, #param-1)
 		else
-			r = yc.command_parsecondition(param, L, eeprom)
+			local r = yc.command_parsecondition(param, L, eeprom)
 			if r == "1" or r == "0" then
 				s = s..r
 			else return nil end
@@ -469,8 +469,8 @@ yc.command_after_execute = function(params)
 		if yc.parsecode(params.code, params.pos) == nil then
 			meta:set_string("infotext", "Code in after() not valid!")
 		else
-			if code ~= nil then
-				meta:set_string("infotext", "Working Microcontroller\n"..code)
+			if params.code ~= nil then
+				meta:set_string("infotext", "Working Microcontroller\n"..params.code)
 			else
 				meta:set_string("infotext", "Working Microcontroller")
 			end
@@ -543,12 +543,13 @@ yc.command_parsecondition = function(cond, L, eeprom)
 	cond = string.gsub(cond, "!0", "1")
 	cond = string.gsub(cond, "!1", "0")
 
-	local i = 2
-	local l = string.len(cond)
+	i = 2
+	l = string.len(cond)
 	while i<=l do
 		local s = cond:sub(i,i)
 		local b = tonumber(cond:sub(i-1, i-1))
 		local a = tonumber(cond:sub(i+1, i+1))
+		local buf
 		if cond:sub(i+1, i+1) == nil then break end
 		if s == "=" then
 			if a==nil then return nil end
@@ -562,8 +563,8 @@ yc.command_parsecondition = function(cond, L, eeprom)
 		i = i + 1
 	end
 
-	local i = 2
-	local l = string.len(cond)
+	i = 2
+	l = string.len(cond)
 	while i<=l do
 		local s = cond:sub(i,i)
 		local b = tonumber(cond:sub(i-1, i-1))
