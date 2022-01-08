@@ -403,9 +403,9 @@ local function find_light_update_conductors()
 					-- The light characteristics change depending on the state.
 					-- The states are added to the set.
 					light_update_conductors[name] = true
-					for _, other_state in ipairs(other_states) do
-						light_update_conductors[other_state] = true
-						checked[other_state] = true
+					for _, other_state2 in ipairs(other_states) do
+						light_update_conductors[other_state2] = true
+						checked[other_state2] = true
 					end
 					break
 				end

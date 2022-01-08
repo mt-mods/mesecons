@@ -224,13 +224,13 @@ local function update_formspec(pos)
 	local errmsg = minetest.formspec_escape(meta:get_string("errmsg"))
 	local tab = meta:get_int("tab")
 	if tab < 1 or tab > 4 then tab = 1 end
-	
+
 	--Default theme settings
 	local textcolor = "#ffffff"
 	local bg_img = "jeija_luac_background.png"
 	local run_img = "jeija_luac_runbutton.png"
 	local close_img = "jeija_close_window.png"
-	
+
 	--If Dreambuilder's theming engine is in use, then override those
 	if minetest.global_exists("dreambuilder_theme") then
 		textcolor = dreambuilder_theme.editor_text_color
@@ -238,7 +238,7 @@ local function update_formspec(pos)
 		run_img = dreambuilder_theme.name.."_jeija_luac_runbutton.png"
 		close_img = dreambuilder_theme.name.."_jeija_close_window.png"
 	end
-	
+
 	local fs = "formspec_version[4]"
 		.."size[15,12]"
 		.."style_type[label,textarea,field;font=mono]"
@@ -246,7 +246,7 @@ local function update_formspec(pos)
 		.."background[0,0;15,12;"..bg_img.."]"
 		.."tabheader[0,0;tab;Code,Terminal,Help,Examples;"..tab.."]"
 		.."image_button_exit[14.5,0;0.425,0.4;"..close_img..";exit;]"
-		
+
 	if tab == 1 then
 		--Code tab
 		fs = fs.."label[0.1,10;"..errmsg.."]"
@@ -701,7 +701,7 @@ local function create_environment(pos, mem, event, itbl, send_warning)
 	for _, name in pairs(safe_globals) do
 		env[name] = _G[name]
 	end
-	
+
 	env.require = get_require(pos, env)
 
 	return env
@@ -863,7 +863,7 @@ local function on_nodetimer_interrupt(pos)
 		event.iid = i
 		run(pos,event)
 	end
-	local interrupts = minetest.deserialize(meta:get_string("interrupts")) or {} --Reload as it may have changed
+	interrupts = minetest.deserialize(meta:get_string("interrupts")) or {} --Reload as it may have changed
 	for _,i in ipairs(current) do
 		if interrupts[i] and interrupts[i] <= os.time() then
 			interrupts[i] = nil

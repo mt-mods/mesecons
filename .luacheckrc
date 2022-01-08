@@ -4,21 +4,25 @@ globals = {
 	"minetest"
 }
 
+exclude_files = {
+	"mesecons_luacontroller/examples/*"
+}
+
 -- ignore unused vars
 unused = false
 
 read_globals = {
 	-- Stdlib
 	string = {fields = {"split"}},
-	table = {fields = {"copy", "getn"}},
+	table = {fields = {"copy", "getn", "insert_all"}},
 
 	-- Minetest
 	"vector", "ItemStack",
-	"dump", "VoxelArea",
+	"dump", "VoxelArea", "DIR_DELIM",
 
 	-- deps
 	"default", "screwdriver",
-	"digiline", "doors"
+	"digiline", "doors", "dreambuilder_theme"
 }
 
 ignore = {
