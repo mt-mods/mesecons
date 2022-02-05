@@ -14,8 +14,8 @@ jobs:
         fetch-depth: 0
     - run: | 
         git config --global user.name 'Upstream Merge Action'
-        git config --global user.email '39065740+BuckarooBanzay@users.noreply.github.com'
-        git remote add -f upstream "https://github.com/minetest-mods/mesecons"
+        git config --global user.email '50966843+S-S-X@users.noreply.github.com'
+        git remote add -f upstream "https://github.com/minetest-mods/mesecons.git"
         git fetch upstream
         git checkout -B upstream
         git reset --hard upstream/master
