@@ -46,11 +46,9 @@ local function on_mvps_move(moved_nodes)
 	end
 end
 
-function mesecon.mvps_process_stack(stack)
-	-- update mesecons for placed nodes ( has to be done after all nodes have been added )
-	for _, n in ipairs(stack) do
-		mesecon.on_placenode(n.pos, minetest.get_node(n.pos))
-	end
+function mesecon.mvps_process_stack()
+	-- This function is kept for compatibility.
+	-- It used to call on_placenode on moved nodes, but that is now done automatically.
 end
 
 -- tests if the node can be pushed into, e.g. air, water, grass
@@ -273,7 +271,6 @@ function mesecon.mvps_push_or_pull(pos, stackdir, movedir, maximum, all_pull_sti
 end
 
 function mesecon.mvps_move_objects(pos, dir, nodestack, movefactor)
-	local objects_to_move = {}
 	local dir_k
 	local dir_l
 	for k, v in pairs(dir) do
@@ -336,11 +333,31 @@ end
 -- TODO: load blocks instead, as with wires.
 mesecon.register_mvps_stopper("ignore")
 
-mesecon.register_mvps_stopper("doors:door_steel_b_1")
-mesecon.register_mvps_stopper("doors:door_steel_t_1")
-mesecon.register_mvps_stopper("doors:door_steel_b_2")
-mesecon.register_mvps_stopper("doors:door_steel_t_2")
-mesecon.register_mvps_stopper("default:chest_locked")
+-- All of the locked and internal nodes in Minetest Game
+for _, name in ipairs({
+	"default:chest_locked",
+	"default:chest_locked_open",
+	"doors:door_steel_b_1", -- old style doors
+	"doors:door_steel_b_2", --
+	"doors:door_steel_t_1", --
+	"doors:door_steel_t_2", --
+	"doors:door_steel_a",   -- new style doors
+	"doors:door_steel_b",   --
+	"doors:door_steel_c",   --
+	"doors:door_steel_d",   --
+	"doors:hidden",
+	"doors:trapdoor_steel",
+	"doors:trapdoor_steel_open",
+	"xpanes:door_steel_bar_a",
+	"xpanes:door_steel_bar_b",
+	"xpanes:door_steel_bar_c",
+	"xpanes:door_steel_bar_d",
+	"xpanes:trapdoor_steel_bar",
+	"xpanes:trapdoor_steel_bar_open",
+}) do
+	mesecon.register_mvps_stopper(name)
+end
+
 mesecon.register_on_mvps_move(mesecon.move_hot_nodes)
 mesecon.register_on_mvps_move(function(moved_nodes)
 	for i = 1, #moved_nodes do

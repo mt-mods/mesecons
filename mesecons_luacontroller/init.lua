@@ -64,13 +64,16 @@ end
 ------------------
 -- These helpers are required to set the port states of the luacontroller
 
+-- Updates the real port states according to the signal change.
+-- Returns whether the real port states actually changed.
 local function update_real_port_states(pos, rule_name, new_state)
 	local meta = minetest.get_meta(pos)
 	if rule_name == nil then
 		meta:set_int("real_portstates", 1)
-		return
+		return true
 	end
-	local n = meta:get_int("real_portstates") - 1
+	local real_portstates = meta:get_int("real_portstates")
+	local n = real_portstates - 1
 	local L = {}
 	for i = 1, 4 do
 		L[i] = n % 2
@@ -87,12 +90,12 @@ local function update_real_port_states(pos, rule_name, new_state)
 		local port = pos_to_side[rule_name.x + (2 * rule_name.z) + 3]
 		L[port] = (new_state == "on") and 1 or 0
 	end
-	meta:set_int("real_portstates",
-		1 +
-		1 * L[1] +
-		2 * L[2] +
-		4 * L[3] +
-		8 * L[4])
+	local new_portstates = 1 + 1 * L[1] + 2 * L[2] + 4 * L[3] + 8 * L[4]
+	if new_portstates ~= real_portstates then
+		meta:set_int("real_portstates", new_portstates)
+		return true
+	end
+	return false
 end
 
 
@@ -193,7 +196,7 @@ local function burn_controller(pos)
 	minetest.after(0.2, mesecon.receptor_off, pos, mesecon.rules.flat)
 end
 
-local function overheat(pos, meta)
+local function overheat(pos)
 	if mesecon.do_overheat(pos) then -- If too hot
 		burn_controller(pos)
 		return true
@@ -768,7 +771,7 @@ local function run_inner(pos, meta, event)
 	if overheat(pos) then return true, "" end
 	if ignore_event(event, meta) then return true, "" end
 
-	-- Load code & mem from meta
+	-- Load mem from meta
 	local mem  = load_memory(meta)
 
 	-- 'Last warning' label.
@@ -782,6 +785,7 @@ local function run_inner(pos, meta, event)
 	local itbl = {}
 	local env = create_environment(pos, mem, event, itbl, send_warning)
 
+	local success
 	-- Create the sandbox and execute code
 	local f, msg = create_sandbox(meta:get_string("code"), env)
 	if not f then return false, msg end
@@ -790,7 +794,6 @@ local function run_inner(pos, meta, event)
 	-- If a string sandbox is already up yet inconsistent, something is very wrong
 	assert(onetruestring.__index == string)
 	onetruestring.__index = env.string
-	local success
 	success, msg = pcall(f)
 	onetruestring.__index = string
 	-- End string true sandboxing
@@ -930,7 +933,7 @@ local selection_box = {
 local digiline = {
 	receptor = {},
 	effector = {
-		action = function(pos, node, channel, msg)
+		action = function(pos, _, channel, msg)
 			msg = clean_and_weigh_digiline_message(msg)
 			run(pos, {type = "digiline", channel = channel, msg = msg})
 		end
@@ -1068,8 +1071,9 @@ for d = 0, 1 do
 		effector = {
 			rules = input_rules[cid],
 			action_change = function (pos, _, rule_name, new_state)
-				update_real_port_states(pos, rule_name, new_state)
-				run(pos, {type=new_state, pin=rule_name})
+				if update_real_port_states(pos, rule_name, new_state) then
+					run(pos, {type=new_state, pin=rule_name})
+				end
 			end,
 		},
 		receptor = {
@@ -1114,7 +1118,7 @@ for d = 0, 1 do
 			c = c == 1,
 			d = d == 1,
 		},
-		after_dig_node = function (pos, node)
+		after_dig_node = function (pos)
 			mesecon.do_cooldown(pos)
 			mesecon.receptor_off(pos, output_rules)
 		end,

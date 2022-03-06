@@ -100,7 +100,6 @@ local piston_on = function(pos, node)
 	minetest.swap_node(pos, {param2 = node.param2, name = pistonspec.onname})
 	minetest.set_node(pusher_pos, {param2 = node.param2, name = pistonspec.pusher})
 	minetest.sound_play("piston_extend", { pos = pos, max_hear_distance = 20, gain = 0.3 }, true)
-	mesecon.mvps_process_stack(stack)
 	mesecon.mvps_move_objects(pusher_pos, dir, oldstack)
 end
 
@@ -255,7 +254,7 @@ local function piston_rotate_pusher(pos, node, player, mode)
 	return piston_rotate_on(piston_pos, piston_node, player, mode)
 end
 
-local function piston_punch(pos, node, player)
+local function piston_punch(pos, _, player)
 	local player_name = player and player.get_player_name and player:get_player_name()
 	if mesecon.mvps_claim(pos, player_name) then
 		minetest.chat_send_player(player_name, "Reclaimed piston")
@@ -489,23 +488,13 @@ minetest.register_node("mesecons_pistons:piston_pusher_sticky", {
 
 
 -- Register pushers as stoppers if they would be seperated from the piston
-local function piston_pusher_get_stopper(node, dir, stack, stackid)
+local function piston_pusher_get_stopper(node, _, stack, stackid)
 	if (stack[stackid + 1]
 	and stack[stackid + 1].node.name   == get_pistonspec(node.name, "pusher").onname
 	and stack[stackid + 1].node.param2 == node.param2)
 	or (stack[stackid - 1]
 	and stack[stackid - 1].node.name   == get_pistonspec(node.name, "pusher").onname
 	and stack[stackid - 1].node.param2 == node.param2) then
-		return false
-	end
-	return true
-end
-
-local function piston_pusher_up_down_get_stopper(node, dir, stack, stackid)
-	if (stack[stackid + 1]
-	and stack[stackid + 1].node.name   == get_pistonspec(node.name, "pusher").onname)
-	or (stack[stackid - 1]
-	and stack[stackid - 1].node.name   == get_pistonspec(node.name, "pusher").onname) then
 		return false
 	end
 	return true
@@ -566,4 +555,4 @@ minetest.register_craft({
 
 
 -- load legacy code
-dofile(minetest.get_modpath("mesecons_pistons")..DIR_DELIM.."legacy.lua")
+dofile(minetest.get_modpath("mesecons_pistons").."/legacy.lua")
