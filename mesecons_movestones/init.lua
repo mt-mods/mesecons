@@ -94,7 +94,7 @@ function mesecon.register_movestone(name, def, is_sticky, is_vertical)
 
 	def.after_place_node = mesecon.mvps_set_owner
 
-	def.on_punch = function(pos, node, player)
+	def.on_punch = function(pos, _, player)
 		local player_name = player and player.get_player_name and player:get_player_name()
 		if mesecon.mvps_claim(pos, player_name) then
 			minetest.get_node_timer(pos):start(timer_interval)
@@ -102,7 +102,7 @@ function mesecon.register_movestone(name, def, is_sticky, is_vertical)
 		end
 	end
 
-	def.on_timer = function(pos, elapsed)
+	def.on_timer = function(pos)
 		local sourcepos = mesecon.is_powered(pos)
 		if not sourcepos then
 			return
