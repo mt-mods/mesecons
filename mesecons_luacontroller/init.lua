@@ -635,6 +635,7 @@ local function create_environment(pos, mem, event, itbl, send_warning)
 		mem = mem,
 		heat = mesecon.get_heat(pos),
 		heat_max = mesecon.setting("overheat_max", 20),
+		pos = pos,
 		print = get_safe_print(pos),
 		clearterm = get_clear(pos),
 		interrupt = get_interrupt(pos, itbl, send_warning),
