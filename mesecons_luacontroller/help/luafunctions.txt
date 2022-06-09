@@ -53,8 +53,16 @@ From the table library:
 
 From the os library:
 * clock
+* datetable
 * difftime
 * time
 
 Other:
 * print
+
+The following special global variables are available in a Luacontroller:
+
+* heat (number)
+* heat_max (number, setting 'overheat_max')
+* pos (table, current node position of the Luacontroller)
+
