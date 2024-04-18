@@ -4,7 +4,7 @@ This repository is no longer maintained and may be deleted at some point in the 
 
 The official (and maintained) `mesecons` mod is here: https://github.com/minetest-mods/mesecons
 
-If you are looking for cheapies luacontroller modifications you will find them implemented in the `mooncontroller` mod: https://github.com/mt-mods/mooncontroller
+If you are looking for @cheapie's Luacontroller modifications you will find them implemented in the `mooncontroller` mod: https://github.com/mt-mods/mooncontroller
 
 
     ########################################################################
